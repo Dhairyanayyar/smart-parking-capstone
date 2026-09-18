@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --no-watchman",
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "db:check": "node server/check-db.js"
@@ -17,5 +17,8 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "jest": "^30.5.1"
   }
 }
