@@ -1,9 +1,12 @@
 const express = require("express");
 const authRoutes = require("./routes/auth");
+const sessionMiddleware = require("./session");
+const loginRoutes = require("./routes/login");
 
 const app = express();
 
 app.use(express.json({ limit: "10kb" }));
+app.use(sessionMiddleware);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Smart Parking!");
@@ -17,6 +20,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api", authRoutes);
+app.use("/api", loginRoutes);
 
 app.use((err, req, res, next) => {
   if (err.type === "entity.parse.failed") {
