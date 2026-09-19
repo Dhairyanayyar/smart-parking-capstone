@@ -1,0 +1,113 @@
+:root {
+  font-family: Arial, sans-serif;
+  color: #163a30;
+  background: #f3f5f0;
+  line-height: 1.5;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+.page {
+  width: min(100% - 2rem, 520px);
+  margin: auto;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 2rem 0;
+  font-weight: bold;
+}
+
+.logo {
+  background: #164b3b;
+  color: white;
+  padding: 0.3rem 0.85rem;
+  border-radius: 8px;
+  font-size: 1.5rem;
+}
+
+.card {
+  background: white;
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+  border: 1px solid #d4ded6;
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  font-weight: bold;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin: 0.75rem 0 1.5rem;
+}
+
+.field { margin: 1rem 0; }
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #75867a;
+  border-radius: 7px;
+  font: inherit;
+}
+
+input[aria-invalid="true"] { border-color: #a32626; }
+
+button {
+  width: 100%;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 7px;
+  background: #164b3b;
+  color: white;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.link {
+  background: transparent;
+  color: #164b3b;
+  text-decoration: underline;
+  margin-top: 0.75rem;
+}
+
+:focus-visible {
+  outline: 3px solid #ae6b00;
+  outline-offset: 3px;
+}
+
+.error, .field-error { color: #a32626; }
+.success { color: #22633b; }
+
+.field-error, .hint {
+  font-size: 0.9rem;
+  margin: 0.4rem 0 1rem;
+}
+
+.hint, footer { color: #526357; }
+
+footer {
+  padding: 1.5rem 0;
+  font-size: 0.85rem;
+  text-align: center;
+}

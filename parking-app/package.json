@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --no-watchman",
+    "test": "jest --no-watchman --roots server",
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "db:check": "node server/check-db.js"
