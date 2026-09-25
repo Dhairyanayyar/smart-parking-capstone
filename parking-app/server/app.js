@@ -2,6 +2,8 @@ const express = require("express");
 const authRoutes = require("./routes/auth");
 const sessionMiddleware = require("./session");
 const loginRoutes = require("./routes/login");
+const passwordResetRoutes = require("./routes/passwordReset");
+const pool = require("./db");
 
 const app = express();
 
@@ -21,6 +23,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api", authRoutes);
 app.use("/api", loginRoutes);
+app.use("/api", passwordResetRoutes(pool));
 
 app.use((err, req, res, next) => {
   if (err.type === "entity.parse.failed") {
