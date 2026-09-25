@@ -2,9 +2,9 @@ const express = require("express");
 const crypto = require("crypto");
 const argon2 = require("argon2");
 
-const router = express.Router();
-
 module.exports = (pool) => {
+  const router = express.Router();
+
   router.post("/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
@@ -57,7 +57,7 @@ module.exports = (pool) => {
       await pool.query(
         `
         INSERT INTO password_reset_tokens
-            (user_id, token_hash, expires_at)
+          (user_id, token_hash, expires_at)
         VALUES ($1, $2, $3)
         `,
         [user.id, tokenHash, expiresAt]
