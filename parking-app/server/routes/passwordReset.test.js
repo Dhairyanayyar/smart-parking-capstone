@@ -1,12 +1,22 @@
+jest.mock("../mailer", () => ({
+  sendPasswordResetEmail: jest.fn().mockResolvedValue()
+}));
+
 const request = require("supertest");
 const express = require("express");
 const passwordResetRoutes = require("./passwordReset");
+
+const {
+  sendPasswordResetEmail
+} = require("../mailer");
 
 describe("Password reset routes", () => {
   let app;
   let pool;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     pool = {
       query: jest.fn()
     };
@@ -37,12 +47,15 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(200);
-    expect(response.body.message).toContain(
-      "If an account exists for that email"
+
+    expect(response.body.message).toBe(
+      "If an account exists for that email, a password reset link has been sent."
     );
+
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
-  test("forgot-password creates reset token for existing user", async () => {
+  test("forgot-password sends reset email for existing user", async () => {
     pool.query
       .mockResolvedValueOnce({
         rows: [
@@ -66,8 +79,19 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(200);
-    expect(response.body.resetToken).toBeDefined();
-    expect(typeof response.body.resetToken).toBe("string");
+
+    expect(response.body.message).toBe(
+      "If an account exists for that email, a password reset link has been sent."
+    );
+
+    expect(response.body.resetToken).toBeUndefined();
+
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith(
+      "test@example.com",
+      expect.any(String)
+    );
   });
 
   test("reset-password requires token", async () => {
@@ -78,6 +102,7 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(400);
+
     expect(response.body.message).toBe(
       "Reset token is required."
     );
@@ -88,13 +113,58 @@ describe("Password reset routes", () => {
       .post("/api/reset-password")
       .send({
         token: "test-token",
-        password: "123"
+        password: "P@1"
       });
 
     expect(response.statusCode).toBe(400);
+
     expect(response.body.message).toBe(
-      "Password must be at least 8 characters."
+      "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character."
     );
+  });
+
+  test("reset-password rejects password without uppercase", async () => {
+    const response = await request(app)
+      .post("/api/reset-password")
+      .send({
+        token: "test-token",
+        password: "password123!"
+      });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  test("reset-password rejects password without lowercase", async () => {
+    const response = await request(app)
+      .post("/api/reset-password")
+      .send({
+        token: "test-token",
+        password: "PASSWORD123!"
+      });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  test("reset-password rejects password without number", async () => {
+    const response = await request(app)
+      .post("/api/reset-password")
+      .send({
+        token: "test-token",
+        password: "Password!"
+      });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  test("reset-password rejects password without special character", async () => {
+    const response = await request(app)
+      .post("/api/reset-password")
+      .send({
+        token: "test-token",
+        password: "Password123"
+      });
+
+    expect(response.statusCode).toBe(400);
   });
 
   test("reset-password rejects invalid token", async () => {
@@ -110,6 +180,7 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(400);
+
     expect(response.body.message).toBe(
       "Invalid or expired reset token."
     );
@@ -135,6 +206,7 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(400);
+
     expect(response.body.message).toBe(
       "Invalid or expired reset token."
     );
@@ -160,6 +232,7 @@ describe("Password reset routes", () => {
       });
 
     expect(response.statusCode).toBe(400);
+
     expect(response.body.message).toBe(
       "Invalid or expired reset token."
     );

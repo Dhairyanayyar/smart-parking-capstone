@@ -2,6 +2,24 @@ const express = require("express");
 const crypto = require("crypto");
 const argon2 = require("argon2");
 
+const {
+  sendPasswordResetEmail
+} = require("../mailer");
+
+function isStrongPassword(password) {
+  if (typeof password !== "string") {
+    return false;
+  }
+
+  return (
+    password.length >= 8 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 module.exports = (pool) => {
   const router = express.Router();
 
@@ -29,7 +47,7 @@ module.exports = (pool) => {
       if (userResult.rows.length === 0) {
         return res.status(200).json({
           message:
-            "If an account exists for that email, a password reset link has been created."
+            "If an account exists for that email, a password reset link has been sent."
         });
       }
 
@@ -63,10 +81,14 @@ module.exports = (pool) => {
         [user.id, tokenHash, expiresAt]
       );
 
+      await sendPasswordResetEmail(
+        user.email,
+        token
+      );
+
       return res.status(200).json({
         message:
-          "If an account exists for that email, a password reset link has been created.",
-        resetToken: token
+          "If an account exists for that email, a password reset link has been sent."
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -87,13 +109,10 @@ module.exports = (pool) => {
         });
       }
 
-      if (
-        !password ||
-        typeof password !== "string" ||
-        password.length < 8
-      ) {
+      if (!isStrongPassword(password)) {
         return res.status(400).json({
-          message: "Password must be at least 8 characters."
+          message:
+            "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character."
         });
       }
 
