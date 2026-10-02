@@ -5,7 +5,7 @@ module.exports = (pool) => {
   const router = express.Router();
 
   function requireLogin(req, res, next) {
-    if (!req.session || !req.session.user) {
+    if (!req.session || !req.session.userId) {
       return res.status(401).json({
         message: "Please log in."
       });
@@ -17,7 +17,7 @@ module.exports = (pool) => {
   // GET /api/profile
   router.get("/profile", requireLogin, async (req, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.session.userId;
 
       const result = await pool.query(
         `
@@ -55,13 +55,12 @@ module.exports = (pool) => {
   // PUT /api/profile
   router.put("/profile", requireLogin, async (req, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.session.userId;
       const { firstName, lastName } = req.body;
 
       if (
-        !firstName ||
         typeof firstName !== "string" ||
-        firstName.trim().length === 0 ||
+        !firstName.trim() ||
         firstName.trim().length > 100
       ) {
         return res.status(400).json({
@@ -71,9 +70,8 @@ module.exports = (pool) => {
       }
 
       if (
-        !lastName ||
         typeof lastName !== "string" ||
-        lastName.trim().length === 0 ||
+        !lastName.trim() ||
         lastName.trim().length > 100
       ) {
         return res.status(400).json({
@@ -104,6 +102,12 @@ module.exports = (pool) => {
         ]
       );
 
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "User not found."
+        });
+      }
+
       return res.status(200).json({
         message: "Profile updated successfully.",
         user: result.rows[0]
@@ -123,7 +127,7 @@ module.exports = (pool) => {
     requireLogin,
     async (req, res) => {
       try {
-        const userId = req.session.user.id;
+        const userId = req.session.userId;
         const { currentPassword, newPassword } = req.body;
 
         if (!currentPassword || !newPassword) {
@@ -174,8 +178,9 @@ module.exports = (pool) => {
           });
         }
 
-        const newPasswordHash =
-          await argon2.hash(newPassword);
+        const newPasswordHash = await argon2.hash(
+          newPassword
+        );
 
         await pool.query(
           `
