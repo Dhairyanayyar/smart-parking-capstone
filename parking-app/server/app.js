@@ -1,8 +1,10 @@
+const reservationRoutes = require("./routes/reservations");
 const express = require("express");
 const authRoutes = require("./routes/auth");
 const sessionMiddleware = require("./session");
 const loginRoutes = require("./routes/login");
 const passwordResetRoutes = require("./routes/passwordReset");
+
 const profileRoutes = require("./routes/profile");
 const pool = require("./db");
 
@@ -10,7 +12,7 @@ const app = express();
 
 app.use(express.json({ limit: "10kb" }));
 app.use(sessionMiddleware);
-
+app.use("/api", reservationRoutes(pool));
 app.get("/", (req, res) => {
   res.send("Welcome to Smart Parking!");
 });
