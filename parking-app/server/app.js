@@ -1,3 +1,4 @@
+const adminParkingRoutes = require("./routes/adminParking");
 const reservationRoutes = require("./routes/reservations");
 const express = require("express");
 const authRoutes = require("./routes/auth");
@@ -28,6 +29,7 @@ app.use("/api", authRoutes);
 app.use("/api", loginRoutes);
 app.use("/api", passwordResetRoutes(pool));
 app.use("/api", profileRoutes(pool));
+app.use("/api", adminParkingRoutes(pool));
 
 app.use((err, req, res, next) => {
   if (err.type === "entity.parse.failed") {
