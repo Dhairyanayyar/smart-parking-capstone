@@ -4,12 +4,18 @@ import { api } from "./api";
 
 const emptyForm = {
   location: "",
+  address: "",
   spaceNumber: "",
   pricePerHour: "",
+  availableDate: "",
+  availableFrom: "",
+  availableUntil: "",
   isAvailable: true
 };
 
-// Admin dashboard for managing parking spaces.
+/**
+ * Administrator dashboard for managing parking spaces.
+ */
 export default function AdminDashboard() {
   const [spaces, setSpaces] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -17,8 +23,9 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  // Retrieves parking spaces from the backend.
+  // Retrieves all parking spaces from the backend.
   async function loadSpaces() {
     try {
       setError("");
@@ -31,12 +38,12 @@ export default function AdminDashboard() {
     }
   }
 
-  // Loads spaces when the dashboard opens.
+  // Loads the parking spaces when the dashboard opens.
   useEffect(() => {
     loadSpaces();
   }, []);
 
-  // Updates the form when an input changes.
+  // Updates the form when the administrator changes an input.
   function handleChange(event) {
     const { name, value, type, checked } = event.target;
 
@@ -46,29 +53,43 @@ export default function AdminDashboard() {
     }));
   }
 
-  // Creates a new space or updates an existing one.
+  // Adds a new parking space or updates an existing one.
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (busy) return;
+
     setError("");
     setMessage("");
 
     const payload = {
       location: form.location.trim(),
+      address: form.address.trim(),
       spaceNumber: form.spaceNumber.trim(),
       pricePerHour: Number(form.pricePerHour),
+      availableDate: form.availableDate,
+      availableFrom: form.availableFrom,
+      availableUntil: form.availableUntil,
       isAvailable: form.isAvailable
     };
 
     if (
       !payload.location ||
+      !payload.address ||
       !payload.spaceNumber ||
       form.pricePerHour === "" ||
       !Number.isFinite(payload.pricePerHour) ||
-      payload.pricePerHour < 0
+      payload.pricePerHour < 0 ||
+      !payload.availableDate ||
+      !payload.availableFrom ||
+      !payload.availableUntil ||
+      payload.availableUntil <= payload.availableFrom
     ) {
       setError("Please enter valid parking space details.");
       return;
     }
+
+    setBusy(true);
 
     try {
       if (editingId !== null) {
@@ -77,9 +98,11 @@ export default function AdminDashboard() {
           "PUT",
           payload
         );
+
         setMessage("Parking space updated successfully.");
       } else {
         await api("/admin/parking-spaces", "POST", payload);
+
         setMessage("Parking space added successfully.");
       }
 
@@ -88,35 +111,48 @@ export default function AdminDashboard() {
       await loadSpaces();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
     }
   }
 
-  // Fills the form with the selected parking space.
+  // Loads a selected parking space into the editing form.
   function handleEdit(space) {
     setEditingId(space.id);
+
     setForm({
-      location: space.location,
-      spaceNumber: space.space_number,
+      location: space.location || "",
+      address: space.address || "",
+      spaceNumber: space.space_number || "",
       pricePerHour: String(space.price_per_hour),
+      availableDate: space.available_date
+        ? space.available_date.slice(0, 10)
+        : "",
+      availableFrom: space.available_from
+        ? space.available_from.slice(0, 5)
+        : "",
+      availableUntil: space.available_until
+        ? space.available_until.slice(0, 5)
+        : "",
       isAvailable: space.is_available
     });
+
     setMessage("");
     setError("");
   }
 
-  // Deletes a parking space after confirmation.
+  // Deletes a parking space after the administrator confirms.
   async function handleDelete(id) {
-    if (!window.confirm("Delete this parking space?")) {
+    if (busy || !window.confirm("Delete this parking space?")) {
       return;
     }
 
+    setBusy(true);
+    setError("");
+    setMessage("");
+
     try {
-      setError("");
-      setMessage("");
-
       await api(`/admin/parking-spaces/${id}`, "DELETE");
-
-      setMessage("Parking space deleted successfully.");
 
       if (editingId === id) {
         setEditingId(null);
@@ -124,15 +160,19 @@ export default function AdminDashboard() {
       }
 
       await loadSpaces();
+      setMessage("Parking space deleted successfully.");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
     }
   }
 
-  // Cancels editing and resets the form.
+  // Cancels the editing operation.
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm);
+    setError("");
   }
 
   return (
@@ -151,11 +191,21 @@ export default function AdminDashboard() {
             : "Add Parking Space"}
         </h3>
 
-        <label htmlFor="parking-location">Location</label>
+        <label htmlFor="parking-location">Location Name</label>
         <input
           id="parking-location"
           name="location"
           value={form.location}
+          onChange={handleChange}
+          maxLength={255}
+          required
+        />
+
+        <label htmlFor="parking-address">Parking Address</label>
+        <input
+          id="parking-address"
+          name="address"
+          value={form.address}
           onChange={handleChange}
           maxLength={255}
           required
@@ -177,8 +227,39 @@ export default function AdminDashboard() {
           name="pricePerHour"
           type="number"
           min="0"
+          max="99999999.99"
           step="0.01"
           value={form.pricePerHour}
+          onChange={handleChange}
+          required
+        />
+
+        <label htmlFor="available-date">Available Date</label>
+        <input
+          id="available-date"
+          name="availableDate"
+          type="date"
+          value={form.availableDate}
+          onChange={handleChange}
+          required
+        />
+
+        <label htmlFor="available-from">Available From</label>
+        <input
+          id="available-from"
+          name="availableFrom"
+          type="time"
+          value={form.availableFrom}
+          onChange={handleChange}
+          required
+        />
+
+        <label htmlFor="available-until">Available Until</label>
+        <input
+          id="available-until"
+          name="availableUntil"
+          type="time"
+          value={form.availableUntil}
           onChange={handleChange}
           required
         />
@@ -195,12 +276,20 @@ export default function AdminDashboard() {
           </label>
         )}
 
-        <button type="submit">
-          {editingId !== null ? "Update Space" : "Add Space"}
+        <button type="submit" disabled={busy}>
+          {busy
+            ? "Saving..."
+            : editingId !== null
+              ? "Update Space"
+              : "Add Space"}
         </button>
 
         {editingId !== null && (
-          <button type="button" onClick={cancelEdit}>
+          <button
+            type="button"
+            onClick={cancelEdit}
+            disabled={busy}
+          >
             Cancel
           </button>
         )}
@@ -216,12 +305,38 @@ export default function AdminDashboard() {
         <div className="parking-space-list">
           {spaces.map((space) => (
             <article key={space.id} className="parking-space-card">
-              <h4>{space.location} — {space.space_number}</h4>
-
-              <p>Price: ${space.price_per_hour}/hour</p>
+              <h4>
+                {space.location} — {space.space_number}
+              </h4>
 
               <p>
-                Status:{" "}
+                <strong>Address:</strong> {space.address || "Not set"}
+              </p>
+
+              <p>
+                <strong>Price:</strong> ${space.price_per_hour}/hour
+              </p>
+
+              <p>
+                <strong>Date:</strong>{" "}
+                {space.available_date
+                  ? space.available_date.slice(0, 10)
+                  : "Not set"}
+              </p>
+
+              <p>
+                <strong>Time:</strong>{" "}
+                {space.available_from
+                  ? space.available_from.slice(0, 5)
+                  : "Not set"}
+                {" - "}
+                {space.available_until
+                  ? space.available_until.slice(0, 5)
+                  : "Not set"}
+              </p>
+
+              <p>
+                <strong>Status:</strong>{" "}
                 {space.is_available
                   ? "Available"
                   : "Unavailable"}
@@ -229,6 +344,7 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => handleEdit(space)}
               >
                 Edit
@@ -236,6 +352,7 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => handleDelete(space.id)}
               >
                 Delete
