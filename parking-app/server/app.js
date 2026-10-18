@@ -10,6 +10,9 @@ const profileRoutes = require("./routes/profile");
 const pool = require("./db");
 
 const app = express();
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
 app.use(express.json({ limit: "10kb" }));
 app.use(sessionMiddleware);
