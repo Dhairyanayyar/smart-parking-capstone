@@ -1,7 +1,10 @@
+
 const app = require("./app");
 
-const PORT = 3001;
+// Use the hosting platform's port or 3001 locally.
+const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`Backend running at http://127.0.0.1:${PORT}`);
+// Listen on all network interfaces for deployment.
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Smart Parking backend running on port ${PORT}`);
 });
