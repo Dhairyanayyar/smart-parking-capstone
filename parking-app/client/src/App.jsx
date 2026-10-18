@@ -1,3 +1,5 @@
+
+import AdminDashboard from "./AdminDashboard";
 import React, { useEffect, useState } from "react";
 import { api } from "./api";
 
@@ -21,6 +23,7 @@ export default function App() {
   const [errors, setErrors] = useState({});
   const [notice, setNotice] = useState(null);
 
+  // Displays an error from the backend.
   function showError(error) {
     setErrors(error.fields || {});
 
@@ -32,6 +35,7 @@ export default function App() {
     });
   }
 
+  // Checks whether the user already has a login session.
   useEffect(() => {
     api("/me")
       .then((data) => setUser(data.user))
@@ -43,6 +47,7 @@ export default function App() {
       .finally(() => setChecking(false));
   }, []);
 
+  // Expires the client session display after 15 minutes.
   useEffect(() => {
     if (!user) return;
 
@@ -59,6 +64,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [user]);
 
+  // Switches between registration and login.
   function switchMode() {
     setMode(mode === "login" ? "register" : "login");
 
@@ -71,6 +77,7 @@ export default function App() {
     setNotice(null);
   }
 
+  // Handles registration and login.
   async function submit(event) {
     event.preventDefault();
 
@@ -114,6 +121,7 @@ export default function App() {
     }
   }
 
+  // Logs out the current user.
   async function logout() {
     setBusy(true);
 
@@ -135,6 +143,7 @@ export default function App() {
     }
   }
 
+  // Retrieves the logged-in user's reservation history.
   async function showReservations() {
     setLoadingReservations(true);
     setNotice(null);
@@ -156,18 +165,37 @@ export default function App() {
     }
   }
 
+  // Opens the administrator dashboard.
+  function showAdminDashboard() {
+    if (!user || user.role !== "admin") {
+      return;
+    }
+
+    setNotice(null);
+    setScreen("admin");
+  }
+
+  // Returns to the account page.
+  function showAccount() {
+    setNotice(null);
+    setScreen("account");
+  }
+
+  // Formats the reservation date.
   function formatDate(value) {
     if (!value) return "";
 
     return value.split("T")[0];
   }
 
+  // Formats the reservation time.
   function formatTime(value) {
     if (!value) return "";
 
     return value.slice(0, 5);
   }
 
+  // Creates a reusable input field.
   function input(name, label, type = "text", autoComplete = "") {
     return (
       <div className="field">
@@ -234,7 +262,22 @@ export default function App() {
               SMART PARKING MANAGEMENT
             </p>
 
-            {user && screen === "reservations" ? (
+            {/* Administrator dashboard screen */}
+            {user?.role === "admin" && screen === "admin" ? (
+              <>
+                <button
+                  type="button"
+                  className="link"
+                  onClick={showAccount}
+                  data-cy="back-account"
+                >
+                  Back to Account
+                </button>
+
+                <AdminDashboard />
+              </>
+            ) : user && screen === "reservations" ? (
+              /* Reservation history screen */
               <>
                 <h1>
                   Reservation History
@@ -256,7 +299,7 @@ export default function App() {
                 <button
                   type="button"
                   className="link"
-                  onClick={() => setScreen("account")}
+                  onClick={showAccount}
                   data-cy="back-account"
                 >
                   Back to Account
@@ -309,6 +352,7 @@ export default function App() {
                 )}
               </>
             ) : (
+              /* Account, login, and registration screen */
               <>
                 <h1>
                   {user
@@ -348,6 +392,17 @@ export default function App() {
                         ? "Loading reservations…"
                         : "View Reservation History"}
                     </button>
+
+                    {/* Only admins see parking management */}
+                    {user.role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={showAdminDashboard}
+                        data-cy="admin-dashboard"
+                      >
+                        Manage Parking Spaces
+                      </button>
+                    )}
 
                     <button
                       type="button"
