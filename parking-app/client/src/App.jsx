@@ -1,5 +1,6 @@
 
 import AdminDashboard from "./AdminDashboard";
+import ParkingBooking from "./ParkingBooking";
 import React, { useEffect, useState } from "react";
 import { api } from "./api";
 
@@ -276,8 +277,19 @@ export default function App() {
 
                 <AdminDashboard />
               </>
-            ) : user && screen === "reservations" ? (
-              /* Reservation history screen */
+            ) : user && screen === "booking" ? (
+  <>
+    <button
+      type="button"
+      className="link"
+      onClick={showAccount}
+    >
+      Back to Account
+    </button>
+
+    <ParkingBooking onBooked={showReservations} />
+  </>
+) : user && screen === "reservations" ? (
               <>
                 <h1>
                   Reservation History
@@ -381,6 +393,20 @@ export default function App() {
                       You are signed in as{" "}
                       <strong>{user.email}</strong>.
                     </p>
+
+                    {/* Regular users can find and book parking spaces. */}
+                    {user.role !== "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotice(null);
+                          setScreen("booking");
+                        }}
+                        data-cy="find-parking"
+                      >
+                        Find & Book Parking
+                      </button>
+                    )}
 
                     <button
                       type="button"
