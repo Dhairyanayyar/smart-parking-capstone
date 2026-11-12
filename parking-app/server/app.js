@@ -10,6 +10,7 @@ const sessionMiddleware = require("./session");
 const loginRoutes = require("./routes/login");
 const passwordResetRoutes = require("./routes/passwordReset");
 const profileRoutes = require("./routes/profile");
+const createParkingSearchRouter = require("./routes/parkingSearch");
 const pool = require("./db");
 
 const app = express();
@@ -31,13 +32,23 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Register backend API routes.
-app.use("/api", reservationRoutes(pool));
-app.use("/api", authRoutes);
-app.use("/api", loginRoutes);
-app.use("/api", passwordResetRoutes(pool));
-app.use("/api", profileRoutes(pool));
-app.use("/api", adminParkingRoutes(pool));
+
+ // Register backend API routes.
+
+ // Week 9: Parking search and date filtering.
+ app.use(
+   "/api/parking-spaces",
+   createParkingSearchRouter(pool)
+ );
+
+ // Existing backend routes.
+ app.use("/api", reservationRoutes(pool));
+ app.use("/api", authRoutes);
+ app.use("/api", loginRoutes);
+ app.use("/api", passwordResetRoutes(pool));
+ app.use("/api", profileRoutes(pool));
+ app.use("/api", adminParkingRoutes(pool));
+
 
 // Location of the React production build.
 const clientDist = path.join(__dirname, "../client/dist");
