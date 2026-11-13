@@ -8,7 +8,9 @@ export default function ParkingBooking({ onBooked }) {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingSpaces, setLoadingSpaces] = useState(true);
 
   function formatDate(value) {
     return String(value || "").slice(0, 10);
@@ -18,12 +20,28 @@ export default function ParkingBooking({ onBooked }) {
     return String(value || "").slice(0, 5);
   }
 
+  function showError(text) {
+    setMessage(text);
+    setMessageType("error");
+  }
+
+  function showSuccess(text) {
+    setMessage(text);
+    setMessageType("success");
+  }
+
   async function loadSpaces() {
+    setLoadingSpaces(true);
+
     try {
       const data = await api("/parking-spaces");
       setSpaces(data.parkingSpaces || []);
     } catch (error) {
-      setMessage(error.message || "Unable to load parking spaces.");
+      showError(
+        error.message || "Unable to load parking spaces."
+      );
+    } finally {
+      setLoadingSpaces(false);
     }
   }
 
@@ -34,15 +52,36 @@ export default function ParkingBooking({ onBooked }) {
   async function bookParking(event) {
     event.preventDefault();
 
-    if (!selected) return;
+    if (!selected || loading) {
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      showError("Please select a start and end time.");
+      return;
+    }
 
     if (startTime >= endTime) {
-      setMessage("End time must be after start time.");
+      showError("End time must be after start time.");
+      return;
+    }
+
+    const availableFrom = formatTime(selected.available_from);
+    const availableUntil = formatTime(selected.available_until);
+
+    if (
+      startTime < availableFrom ||
+      endTime > availableUntil
+    ) {
+      showError(
+        "Please select a time within the parking space availability."
+      );
       return;
     }
 
     setLoading(true);
     setMessage("");
+    setMessageType("");
 
     try {
       await api("/reservations", "POST", {
@@ -52,14 +91,31 @@ export default function ParkingBooking({ onBooked }) {
         endTime
       });
 
-      setMessage("Parking booked successfully!");
+      showSuccess("Parking booked successfully!");
+
       setSelected(null);
+      setStartTime("");
+      setEndTime("");
+
+      await loadSpaces();
 
       if (onBooked) {
         await onBooked();
       }
     } catch (error) {
-      setMessage(error.message || "Booking failed.");
+      if (error.status === 409) {
+        showError(
+          "This parking space is already booked for the selected time. Please choose another time or parking space."
+        );
+      } else if (error.status === 401) {
+        showError(
+          "Your session has expired. Please sign in again."
+        );
+      } else {
+        showError(
+          error.message || "Unable to complete booking."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -69,40 +125,84 @@ export default function ParkingBooking({ onBooked }) {
     <div>
       <h1>Find & Book Parking</h1>
 
-      {message && <p role="status">{message}</p>}
+      {message && (
+        <p
+          role={messageType === "error" ? "alert" : "status"}
+          style={{
+            color:
+              messageType === "error"
+                ? "#b91c1c"
+                : "#15803d",
+            backgroundColor:
+              messageType === "error"
+                ? "#fef2f2"
+                : "#f0fdf4",
+            padding: "12px",
+            borderRadius: "8px",
+            border: `1px solid ${
+              messageType === "error"
+                ? "#fecaca"
+                : "#bbf7d0"
+            }`
+          }}
+        >
+          {message}
+        </p>
+      )}
 
-      {spaces.length === 0 && (
+      {loadingSpaces && (
+        <p role="status">Loading parking spaces...</p>
+      )}
+
+      {!loadingSpaces && spaces.length === 0 && (
         <p>No available parking spaces found.</p>
       )}
 
-      {spaces.map((space) => (
-        <div className="reservation-card" key={space.id}>
-          <h3>
-            {space.location} - {space.space_number}
-          </h3>
-
-          <p>Address: {space.address}</p>
-          <p>Price: ${space.price_per_hour}/hour</p>
-          <p>Date: {formatDate(space.available_date)}</p>
-          <p>
-            Available: {formatTime(space.available_from)}
-            {" - "}
-            {formatTime(space.available_until)}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelected(space);
-              setStartTime(formatTime(space.available_from));
-              setEndTime(formatTime(space.available_until));
-              setMessage("");
-            }}
+      {!loadingSpaces &&
+        spaces.map((space) => (
+          <div
+            className="reservation-card"
+            key={space.id}
           >
-            Book This Space
-          </button>
-        </div>
-      ))}
+            <h3>
+              {space.location} - {space.space_number}
+            </h3>
+
+            <p>Address: {space.address}</p>
+
+            <p>
+              Price: ${space.price_per_hour}/hour
+            </p>
+
+            <p>
+              Date: {formatDate(space.available_date)}
+            </p>
+
+            <p>
+              Available: {formatTime(space.available_from)}
+              {" - "}
+              {formatTime(space.available_until)}
+            </p>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setSelected(space);
+                setStartTime(
+                  formatTime(space.available_from)
+                );
+                setEndTime(
+                  formatTime(space.available_until)
+                );
+                setMessage("");
+                setMessageType("");
+              }}
+            >
+              Book This Space
+            </button>
+          </div>
+        ))}
 
       {selected && (
         <form onSubmit={bookParking}>
@@ -113,7 +213,10 @@ export default function ParkingBooking({ onBooked }) {
           </p>
 
           <div className="field">
-            <label htmlFor="bookingStart">Start Time</label>
+            <label htmlFor="bookingStart">
+              Start Time
+            </label>
+
             <input
               id="bookingStart"
               type="time"
@@ -121,12 +224,18 @@ export default function ParkingBooking({ onBooked }) {
               value={startTime}
               min={formatTime(selected.available_from)}
               max={formatTime(selected.available_until)}
-              onChange={(event) => setStartTime(event.target.value)}
+              disabled={loading}
+              onChange={(event) =>
+                setStartTime(event.target.value)
+              }
             />
           </div>
 
           <div className="field">
-            <label htmlFor="bookingEnd">End Time</label>
+            <label htmlFor="bookingEnd">
+              End Time
+            </label>
+
             <input
               id="bookingEnd"
               type="time"
@@ -134,12 +243,20 @@ export default function ParkingBooking({ onBooked }) {
               value={endTime}
               min={formatTime(selected.available_from)}
               max={formatTime(selected.available_until)}
-              onChange={(event) => setEndTime(event.target.value)}
+              disabled={loading}
+              onChange={(event) =>
+                setEndTime(event.target.value)
+              }
             />
           </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Booking..." : "Confirm Booking"}
+          <button
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Booking..."
+              : "Confirm Booking"}
           </button>
         </form>
       )}
