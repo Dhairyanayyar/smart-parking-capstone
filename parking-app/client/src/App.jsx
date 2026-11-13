@@ -1,3 +1,4 @@
+import ParkingSearch from "./ParkingSearch";
 
 import AdminDashboard from "./AdminDashboard";
 import ParkingBooking from "./ParkingBooking";
@@ -277,6 +278,17 @@ export default function App() {
 
                 <AdminDashboard />
               </>
+             ) : user && screen === "search" ? (
+              <>
+                <button
+                  type="button"
+                  className="link"
+                  onClick={showAccount}
+                >
+                  Back to Account
+                </button>
+                <ParkingSearch />
+              </>
             ) : user && screen === "booking" ? (
   <>
     <button
@@ -393,6 +405,17 @@ export default function App() {
                       You are signed in as{" "}
                       <strong>{user.email}</strong>.
                     </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotice(null);
+                        setScreen("search");
+                      }}
+                      data-cy="search-parking"
+                    >
+                      Search Available Parking
+                    </button>
 
                     {/* Regular users can find and book parking spaces. */}
                     {user.role !== "admin" && (
